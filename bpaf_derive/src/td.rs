@@ -358,7 +358,7 @@ impl Parse for Ed {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum EAttr {
     NamedCommand(LitStr),
     UnnamedCommand,

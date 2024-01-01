@@ -36,7 +36,7 @@ impl ToTokens for TurboFish<'_> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Consumer {
     Switch {
         span: Span,
@@ -187,7 +187,7 @@ impl ToTokens for StrictName {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum Post {
     /// Those items can change the type of the result
     Parse(PostParse),
@@ -244,7 +244,7 @@ impl ToTokens for PostDecor {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum PostParse {
     Adjacent { span: Span },
     Catch { span: Span },
@@ -274,7 +274,7 @@ impl PostParse {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum PostDecor {
     Complete {
         span: Span,
@@ -348,22 +348,6 @@ impl PostDecor {
             | Self::HideUsage { span } => *span,
         }
     }
-}
-
-/// Checks if a custom `bpaf_path` has been specified and returns it. If one
-/// was not specified, then return `::bpaf` (the absolute path), by default.
-///
-/// Note: if `bpaf_path` is defined multiple times, the last definition
-/// overrides all others.
-pub(crate) fn extract_bpaf_path(decors: &[PostDecor]) -> TokenStream {
-    decors
-        .iter()
-        .rev()
-        .find_map(|a| match a {
-            PostDecor::CratePath { bpaf_path, .. } => Some(bpaf_path.to_token_stream()),
-            _ => None,
-        })
-        .unwrap_or(quote!("#bpaf_path"))
 }
 
 impl Post {
@@ -556,7 +540,7 @@ pub(crate) struct CustomHelp {
     pub doc: Box<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct EnumPrefix(pub Ident);
 
 impl ToTokens for EnumPrefix {

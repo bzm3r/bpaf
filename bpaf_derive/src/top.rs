@@ -9,7 +9,8 @@ use syn::{
 };
 
 use crate::{
-    attrs::{extract_bpaf_path, parse_bpaf_doc_attrs, EnumPrefix, PostDecor, StrictName},
+    attrs::{parse_bpaf_doc_attrs, EnumPrefix, PostDecor, StrictName},
+    custom_path::{extract_bpaf_path, FindAndReplace},
     field::StructField,
     help::Help,
     td::{CommandCfg, EAttr, Ed, Mode, OptionsCfg, ParserCfg, TopInfo},
@@ -180,7 +181,14 @@ impl ToTokens for Top {
         } else {
             quote!()
         };
-        let bpaf_path = extract_bpaf_path(&attrs);
+
+        let new_body = if let Some(bpaf_path) = extract_bpaf_path(&attrs) {
+            let global_path: syn::Path = syn::parse2(quote!(::bpaf)).unwrap();
+            Some(body.find_and_replace(&global_path, &bpaf_path).unwrap())
+        } else {
+            None
+        };
+        let body = new_body.as_ref().unwrap_or(body);
 
         match mode {
             Mode::Command { command, options } => {
@@ -210,10 +218,10 @@ impl ToTokens for Top {
                 let short = short.iter().map(|v| quote!(.short(#v)));
                 let help = help.as_ref().map(|v| quote!(.help(#v)));
                 quote! {
-                    #vis fn #generate() -> impl #bpaf_path::Parser<#ty> {
+                    #vis fn #generate() -> impl ::bpaf::Parser<#ty> {
 
                         #[allow(unused_imports)]
-                        use #bpaf_path::Parser;
+                        use ::bpaf::Parser;
                         #body
                         #(.#attrs)*
                         .to_options()
@@ -241,7 +249,7 @@ impl ToTokens for Top {
                     header,
                 } = options;
                 let body = match cargo_helper {
-                    Some(cargo) => quote!(#bpaf_path::cargo_helper(#cargo, #body)),
+                    Some(cargo) => quote!(::bpaf::cargo_helper(#cargo, #body)),
                     None => quote!(#body),
                 };
 
@@ -251,9 +259,9 @@ impl ToTokens for Top {
                 let footer = footer.as_ref().map(|v| quote!(.footer(#v)));
                 let header = header.as_ref().map(|v| quote!(.header(#v)));
                 quote! {
-                    #vis fn #generate() -> #bpaf_path::OptionParser<#ty> {
+                    #vis fn #generate() -> ::bpaf::OptionParser<#ty> {
                         #[allow(unused_imports)]
-                        use #bpaf_path::Parser;
+                        use ::bpaf::Parser;
                         #body
                         #(.#attrs)*
                         .to_options()
@@ -269,9 +277,9 @@ impl ToTokens for Top {
                 let ParserCfg { group_help } = &parser;
                 let group_help = group_help.as_ref().map(|v| quote!(.group_help(#v)));
                 quote! {
-                    #vis fn #generate() -> impl #bpaf_path::Parser<#ty> {
+                    #vis fn #generate() -> impl ::bpaf::Parser<#ty> {
                         #[allow(unused_imports)]
-                        use #bpaf_path::Parser;
+                        use ::bpaf::Parser;
                         #body
                         #group_help
                         #adjacent
@@ -280,8 +288,7 @@ impl ToTokens for Top {
                     }
                 }
             }
-        }
-        .to_tokens(tokens)
+        }.to_tokens(tokens)
     }
 }
 
@@ -289,8 +296,8 @@ impl ToTokens for Top {
 
 /// Describes the actual fields,
 /// can be either a single branch for struct or multiple enum variants
-#[derive(Debug)]
-enum Body {
+#[derive(Debug, Clone)]
+pub(crate) enum Body {
     // {{{
     Single(Branch),
     Alternatives(Ident, Vec<EnumBranch>),
@@ -388,7 +395,7 @@ impl ToTokens for Body {
                 let name_t = name_f.clone();
                 quote! {{
                     #( let #name_f = #branches; )*
-                    #bpaf_path::construct!([ #( #name_t, )* ])
+                    ::bpaf::construct!([ #( #name_t, )* ])
                 }}
             }
         }
@@ -494,7 +501,7 @@ impl Parse for ParsedEnumBranch {
 
 // }}}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct EnumBranch {
     // {{{
     branch: Branch,
@@ -510,12 +517,12 @@ impl ToTokens for EnumBranch {
 
 // }}}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Branch {
     // {{{
-    enum_name: Option<EnumPrefix>,
-    ident: Ident,
-    fields: FieldSet,
+    pub(crate) enum_name: Option<EnumPrefix>,
+    pub(crate) ident: Ident,
+    pub(crate) fields: FieldSet,
 }
 
 impl Branch {
@@ -523,7 +530,7 @@ impl Branch {
         if let FieldSet::Unit(_, _, _) = self.fields {
             let ident = &self.ident;
             let enum_name = &self.enum_name;
-            self.fields = FieldSet::Pure(parse_quote!(#bpaf_path::pure(#enum_name #ident)));
+            self.fields = FieldSet::Pure(parse_quote!(::bpaf::pure(#enum_name #ident)));
         }
     }
 
@@ -604,7 +611,7 @@ impl ToTokens for Branch {
                 let value = fields.iter();
                 quote! {{
                     #( let #name = #value; )*
-                    #bpaf_path::construct!( #enum_name #ident { #( #result , )* })
+                    ::bpaf::construct!( #enum_name #ident { #( #result , )* })
                 }}
             }
             FieldSet::Unnamed(fields) => {
@@ -616,7 +623,7 @@ impl ToTokens for Branch {
                 let value = fields.iter();
                 quote! {{
                     #( let #name = #value; )*
-                    #bpaf_path::construct!( #enum_name #ident ( #( #result , )* ))
+                    ::bpaf::construct!( #enum_name #ident ( #( #result , )* ))
                 }}
             }
             FieldSet::Unit(ident, names, help) => {
@@ -625,9 +632,9 @@ impl ToTokens for Branch {
                     let name = StrictName::Long {
                         name: ident_to_long(ident),
                     };
-                    quote!(#bpaf_path:: #name.#(help(#help).)* req_flag(#enum_name #ident))
+                    quote!(::bpaf:: #name.#(help(#help).)* req_flag(#enum_name #ident))
                 } else {
-                    quote!(#bpaf_path:: #( #names .)* #(help(#help).)* req_flag(#enum_name #ident))
+                    quote!(::bpaf:: #( #names .)* #(help(#help).)* req_flag(#enum_name #ident))
                 }
             }
             FieldSet::Pure(x) => quote!(#x),
@@ -637,7 +644,7 @@ impl ToTokens for Branch {
 }
 // }}}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum FieldSet {
     // {{{
     Named(Punctuated<StructField, token::Comma>),
