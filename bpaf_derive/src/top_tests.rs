@@ -13,12 +13,12 @@ fn cargo_command_helper() {
     };
 
     let expected = quote! {
-        fn opts() -> ::bpaf::OptionParser<Opts> {
+        fn opts() -> #bpaf_path::OptionParser<Opts> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
-            ::bpaf::cargo_helper("asm", {
-                let verbose = ::bpaf::long("verbose").switch();
-                ::bpaf::construct!(Opts { verbose, })
+            use #bpaf_path::Parser;
+            #bpaf_path::cargo_helper("asm", {
+                let verbose = #bpaf_path::long("verbose").switch();
+                #bpaf_path::construct!(Opts { verbose, })
             })
             .to_options()
         }
@@ -33,12 +33,12 @@ fn top_struct_construct() {
     };
 
     let expected = quote! {
-        fn opt() -> impl ::bpaf::Parser<Opt> {
+        fn opt() -> impl #bpaf_path::Parser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let verbose = ::bpaf::long("verbose").switch();
-                ::bpaf::construct!(Opt { verbose, })
+                let verbose = #bpaf_path::long("verbose").switch();
+                #bpaf_path::construct!(Opt { verbose, })
             }
         }
     };
@@ -53,12 +53,12 @@ fn top_enum_construct() {
     };
 
     let expected = quote! {
-        fn opt() -> impl ::bpaf::Parser<Opt> {
+        fn opt() -> impl #bpaf_path::Parser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let verbose_name = ::bpaf::long("verbose-name").switch();
-                ::bpaf::construct!(Opt::Foo { verbose_name, })
+                let verbose_name = #bpaf_path::long("verbose-name").switch();
+                #bpaf_path::construct!(Opt::Foo { verbose_name, })
             }
         }
     };
@@ -81,11 +81,11 @@ fn top_struct_options1() {
     };
 
     let expected = quote! {
-        fn opt() -> ::bpaf::OptionParser<Opt> {
+        fn opt() -> #bpaf_path::OptionParser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
                 {
-                    ::bpaf::construct!(Opt {})
+                    #bpaf_path::construct!(Opt {})
                 }
                 .to_options()
                 .descr("those are options")
@@ -105,11 +105,11 @@ fn options_with_custom_usage() {
     };
 
     let expected = quote! {
-        fn opt() -> ::bpaf::OptionParser<Opt> {
+        fn opt() -> #bpaf_path::OptionParser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
                 {
-                    ::bpaf::construct!(Opt {})
+                    #bpaf_path::construct!(Opt {})
                 }
                 .to_options()
                 .usage("App: usage")
@@ -128,11 +128,11 @@ fn struct_options2() {
     };
 
     let expected = quote! {
-        fn opt() -> ::bpaf::OptionParser<Opt> {
+        fn opt() -> #bpaf_path::OptionParser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                ::bpaf::construct!(Opt {})
+                #bpaf_path::construct!(Opt {})
             }
             .to_options()
             .descr("those are options")
@@ -151,10 +151,10 @@ fn struct_command_no_decor() {
     };
 
     let expected = quote! {
-        fn opt() -> impl ::bpaf::Parser<Opt> {
+        fn opt() -> impl #bpaf_path::Parser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
-            ::bpaf::pure(Opt)
+            use #bpaf_path::Parser;
+            #bpaf_path::pure(Opt)
                 .to_options()
                 .descr("those are options")
                 .command("opt")
@@ -172,10 +172,10 @@ fn struct_command_decor() {
     };
 
     let expected = quote! {
-        fn opt() -> impl ::bpaf::Parser<Opt> {
+        fn opt() -> impl #bpaf_path::Parser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
-            ::bpaf::pure(Opt)
+            use #bpaf_path::Parser;
+            #bpaf_path::pure(Opt)
                 .to_options()
                 .descr(descr)
                 .header(header)
@@ -196,11 +196,11 @@ fn struct_command_short() {
     };
 
     let expected = quote! {
-        fn o() -> impl ::bpaf::Parser<O> {
+        fn o() -> impl #bpaf_path::Parser<O> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                ::bpaf::construct!(O{ })
+                #bpaf_path::construct!(O{ })
             }
             .to_options()
             .descr("those are options")
@@ -236,14 +236,14 @@ fn unnamed_command_enum() {
     };
 
     let expected = quote! {
-        fn opts() -> impl ::bpaf::Parser<Opts> {
+        fn opts() -> impl #bpaf_path::Parser<Opts> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::pure(Opts::Alpha).to_options().command("alpha1");
-                let alt1 = ::bpaf::long("beta").req_flag(Opts::Beta);
-                let alt2 = ::bpaf::long("gamma").req_flag(Opts::Gamma);
-                ::bpaf::construct!([alt0, alt1, alt2,])
+                let alt0 = #bpaf_path::pure(Opts::Alpha).to_options().command("alpha1");
+                let alt1 = #bpaf_path::long("beta").req_flag(Opts::Beta);
+                let alt2 = #bpaf_path::long("gamma").req_flag(Opts::Gamma);
+                #bpaf_path::construct!([alt0, alt1, alt2,])
             }
             .to_options()
             .command("opts")
@@ -273,12 +273,12 @@ fn enum_markdownish() {
     };
 
     let expected = quote! {
-        fn opt() -> impl ::bpaf::Parser<Opt> {
+        fn opt() -> impl #bpaf_path::Parser<Opt> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let field = ::bpaf::long("field").switch();
-                ::bpaf::construct!(Opt::Opt { field ,})
+                let field = #bpaf_path::long("field").switch();
+                #bpaf_path::construct!(Opt::Opt { field ,})
             }
             .to_options()
             .footer("Examples:\n\n```sh\ncargo 1\ncargo 2\n```")
@@ -313,13 +313,13 @@ fn enum_command() {
     };
 
     let expected = quote! {
-        fn opt() -> ::bpaf::OptionParser<Opt> {
+        fn opt() -> #bpaf_path::OptionParser<Opt> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
                 let alt0 = {
-                    let field = ::bpaf::long("field").argument::<usize>("ARG");
-                    ::bpaf::construct!(Opt::Foo { field, })
+                    let field = #bpaf_path::long("field").argument::<usize>("ARG");
+                    #bpaf_path::construct!(Opt::Foo { field, })
                 }
                 .to_options()
                 .footer("footer")
@@ -328,14 +328,14 @@ fn enum_command() {
                 .command("foo");
 
                 let alt1 = {
-                    let field = ::bpaf::long("field").switch();
-                    ::bpaf::construct!(Opt::Bar { field, })
+                    let field = #bpaf_path::long("field").switch();
+                    #bpaf_path::construct!(Opt::Bar { field, })
                 }
                 .to_options()
                 .descr("bar doc")
                 .command("bar")
                 .adjacent();
-                ::bpaf::construct!([alt0, alt1, ])
+                #bpaf_path::construct!([alt0, alt1, ])
             }
             .to_options()
             .header(h)
@@ -356,12 +356,12 @@ fn unnamed_struct() {
     };
 
     let expected = quote! {
-        fn opt() -> ::bpaf::OptionParser<Opt> {
+        fn opt() -> #bpaf_path::OptionParser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let f0 = ::bpaf::positional::<PathBuf>("ARG").help("help");
-                ::bpaf::construct!(Opt(f0,))
+                let f0 = #bpaf_path::positional::<PathBuf>("ARG").help("help");
+                #bpaf_path::construct!(Opt(f0,))
             }
             .to_options()
         }
@@ -379,13 +379,13 @@ fn unnamed_enum() {
     };
 
     let expected = quote! {
-        fn opt1() -> ::bpaf::OptionParser<Opt1> {
+        fn opt1() -> #bpaf_path::OptionParser<Opt1> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let f0 = ::bpaf::positional::<PathBuf>("ARG");
-                let f1 = ::bpaf::positional::<usize>("ARG");
-                ::bpaf::construct!(Opt1::Con1(f0, f1,))
+                let f0 = #bpaf_path::positional::<PathBuf>("ARG");
+                let f1 = #bpaf_path::positional::<usize>("ARG");
+                #bpaf_path::construct!(Opt1::Con1(f0, f1,))
             }
             .to_options()
             .version(env!("CARGO_PKG_VERSION"))
@@ -413,24 +413,24 @@ fn enum_to_flag_and_switches() {
     };
 
     let expected = quote! {
-        pub fn opt() -> impl ::bpaf::Parser<Opt> {
+        pub fn opt() -> impl #bpaf_path::Parser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::long("Foo").long("fo").req_flag(Opt::Foo);
-                let alt1 = ::bpaf::short('p').req_flag(Opt::Pff);
-                let alt2 = ::bpaf::long("bar-foo").req_flag(Opt::BarFoo);
+                let alt0 = #bpaf_path::long("Foo").long("fo").req_flag(Opt::Foo);
+                let alt1 = #bpaf_path::short('p').req_flag(Opt::Pff);
+                let alt2 = #bpaf_path::long("bar-foo").req_flag(Opt::BarFoo);
                 let alt3 = {
-                    let f0 = ::bpaf::long("bazz").argument::<String>("ARG");
-                    ::bpaf::construct!(Opt::Baz(f0, ))
+                    let f0 = #bpaf_path::long("bazz").argument::<String>("ARG");
+                    #bpaf_path::construct!(Opt::Baz(f0, ))
                 };
                 let alt4 = {
-                    let strange = ::bpaf::long("strange").argument::<String>("ARG");
-                    ::bpaf::construct!(Opt::Strange { strange, })
+                    let strange = #bpaf_path::long("strange").argument::<String>("ARG");
+                    #bpaf_path::construct!(Opt::Strange { strange, })
                 };
-                let alt5 = ::bpaf::pure(Opt::Alpha).to_options().usage("custom").command("alpha");
-                let alt6 = ::bpaf::pure(Opt::Omega).to_options().command("omega");
-                ::bpaf::construct!([alt0, alt1, alt2, alt3, alt4, alt5, alt6, ])
+                let alt5 = #bpaf_path::pure(Opt::Alpha).to_options().usage("custom").command("alpha");
+                let alt6 = #bpaf_path::pure(Opt::Omega).to_options().command("omega");
+                #bpaf_path::construct!([alt0, alt1, alt2, alt3, alt4, alt5, alt6, ])
             }
         }
     };
@@ -453,12 +453,12 @@ fn help_generation() {
     };
 
     let expected = quote! {
-        fn opt() -> ::bpaf::OptionParser<Opt> {
+        fn opt() -> #bpaf_path::OptionParser<Opt> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let f0 = ::bpaf::positional::<PathBuf>("ARG");
-                ::bpaf::construct!(Opt(f0, ))
+                let f0 = #bpaf_path::positional::<PathBuf>("ARG");
+                #bpaf_path::construct!(Opt(f0, ))
             }
             .to_options()
             .descr("descr\n  a")
@@ -478,13 +478,13 @@ fn version_with_commands() {
         }
     };
     let expected = quote! {
-        fn action() -> ::bpaf::OptionParser<Action> {
+        fn action() -> #bpaf_path::OptionParser<Action> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::long("alpha").req_flag(Action::Alpha);
-                let alt1 = ::bpaf::long("beta").req_flag(Action::Beta);
-                ::bpaf::construct!([alt0, alt1, ])
+                let alt0 = #bpaf_path::long("alpha").req_flag(Action::Alpha);
+                let alt1 = #bpaf_path::long("beta").req_flag(Action::Beta);
+                #bpaf_path::construct!([alt0, alt1, ])
             }
             .to_options()
             .version(env!("CARGO_PKG_VERSION"))
@@ -507,22 +507,22 @@ fn hidden_command() {
         }
     };
     let expected = quote! {
-        fn action() -> ::bpaf::OptionParser<Action> {
+        fn action() -> #bpaf_path::OptionParser<Action> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::pure(Action::Visible)
+                let alt0 = #bpaf_path::pure(Action::Visible)
                     .to_options()
                     .descr("visible help")
                     .command("visible");
 
-                let alt1 = ::bpaf::pure(Action::Hidden)
+                let alt1 = #bpaf_path::pure(Action::Hidden)
                     .to_options()
                     .descr("hidden help")
                     .command("hidden")
                     .hide();
 
-                ::bpaf::construct!([alt0, alt1, ])
+                #bpaf_path::construct!([alt0, alt1, ])
             }
             .to_options()
         }
@@ -537,10 +537,10 @@ fn req_flag_struct() {
     };
 
     let expected = quote! {
-        fn foo() -> impl ::bpaf::Parser<Foo> {
+        fn foo() -> impl #bpaf_path::Parser<Foo> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
-            ::bpaf::long("foo").req_flag(Foo)
+            use #bpaf_path::Parser;
+            #bpaf_path::long("foo").req_flag(Foo)
         }
     };
     assert_eq!(top.to_token_stream().to_string(), expected.to_string());
@@ -553,10 +553,10 @@ fn generate_parser() {
             struct Foo;
     };
     let expected = quote! {
-        fn oof() -> impl ::bpaf::Parser<Foo> {
+        fn oof() -> impl #bpaf_path::Parser<Foo> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
-            ::bpaf::long("foo").req_flag(Foo)
+            use #bpaf_path::Parser;
+            #bpaf_path::long("foo").req_flag(Foo)
         }
     };
     assert_eq!(top.to_token_stream().to_string(), expected.to_string());
@@ -569,10 +569,10 @@ fn generate_options() {
             struct Foo;
     };
     let expected = quote! {
-        fn oof() -> ::bpaf::OptionParser<Foo> {
+        fn oof() -> #bpaf_path::OptionParser<Foo> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
-            ::bpaf::long("foo").req_flag(Foo).to_options()
+            use #bpaf_path::Parser;
+            #bpaf_path::long("foo").req_flag(Foo).to_options()
         }
     };
     assert_eq!(top.to_token_stream().to_string(), expected.to_string());
@@ -585,10 +585,10 @@ fn generate_command() {
             struct Foo;
     };
     let expected = quote! {
-        fn oof() -> impl ::bpaf::Parser<Foo> {
+        fn oof() -> impl #bpaf_path::Parser<Foo> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
-            ::bpaf::pure(Foo).to_options().command("foo")
+            use #bpaf_path::Parser;
+            #bpaf_path::pure(Foo).to_options().command("foo")
         }
     };
     assert_eq!(top.to_token_stream().to_string(), expected.to_string());
@@ -605,12 +605,12 @@ fn command_with_aliases_struct() {
     };
 
     let expected = quote! {
-        fn command() -> impl ::bpaf::Parser<Command> {
+        fn command() -> impl #bpaf_path::Parser<Command> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let i = ::bpaf::short('i').switch();
-                ::bpaf::construct!(Command { i, })
+                let i = #bpaf_path::short('i').switch();
+                #bpaf_path::construct!(Command { i, })
             }
             .to_options()
             .descr("help")
@@ -636,12 +636,12 @@ fn command_with_aliases_enum() {
     };
 
     let expected = quote! {
-        fn options() -> impl ::bpaf::Parser<Options> {
+        fn options() -> impl #bpaf_path::Parser<Options> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let i = ::bpaf::short('i').switch();
-                ::bpaf::construct!(Options::Command { i, })
+                let i = #bpaf_path::short('i').switch();
+                #bpaf_path::construct!(Options::Command { i, })
             }
             .to_options()
             .descr("help")
@@ -667,13 +667,13 @@ fn version_with_commands_with_cargo_helper() {
     };
 
     let expected = quote! {
-        fn action() -> ::bpaf::OptionParser<Action> {
+        fn action() -> #bpaf_path::OptionParser<Action> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
-                ::bpaf::cargo_helper("subcargo", {
-                    let alt0 = ::bpaf::pure(Action::Alpha).to_options().command("alpha");
-                    let alt1 = ::bpaf::pure(Action::Beta).to_options().command("beta");
-                    ::bpaf::construct!([alt0, alt1, ])
+            use #bpaf_path::Parser;
+                #bpaf_path::cargo_helper("subcargo", {
+                    let alt0 = #bpaf_path::pure(Action::Alpha).to_options().command("alpha");
+                    let alt1 = #bpaf_path::pure(Action::Beta).to_options().command("beta");
+                    #bpaf_path::construct!([alt0, alt1, ])
                 })
                 .to_options()
                 .version(env!("CARGO_PKG_VERSION"))
@@ -693,12 +693,12 @@ fn named_to_positional_with_metavar() {
     };
 
     let expected = quote! {
-        fn options() -> impl ::bpaf::Parser<Options> {
+        fn options() -> impl #bpaf_path::Parser<Options> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let path = ::bpaf::positional::<PathBuf>("PATH");
-                ::bpaf::construct!(Options { path, })
+                let path = #bpaf_path::positional::<PathBuf>("PATH");
+                #bpaf_path::construct!(Options { path, })
             }
         }
     };
@@ -716,12 +716,12 @@ fn named_to_positional_without_metavar() {
     };
 
     let expected = quote! {
-        fn options() -> impl ::bpaf::Parser<Options> {
+        fn options() -> impl #bpaf_path::Parser<Options> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let path = ::bpaf::positional::<PathBuf>("ARG");
-                ::bpaf::construct!(Options { path, })
+                let path = #bpaf_path::positional::<PathBuf>("ARG");
+                #bpaf_path::construct!(Options { path, })
             }
         }
     };
@@ -739,12 +739,12 @@ fn private_visibility() {
     };
 
     let expected = quote! {
-        fn options() -> impl ::bpaf::Parser<Options> {
+        fn options() -> impl #bpaf_path::Parser<Options> {
             #[allow (unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let path = ::bpaf::long("path").argument::<PathBuf>("ARG");
-                ::bpaf::construct!(Options { path, })
+                let path = #bpaf_path::long("path").argument::<PathBuf>("ARG");
+                #bpaf_path::construct!(Options { path, })
             }
         }
     };
@@ -773,17 +773,17 @@ fn hidden_default_enum_singleton() {
     };
 
     let expected = quote! {
-        fn decision() -> impl ::bpaf::Parser<Decision> {
+        fn decision() -> impl #bpaf_path::Parser<Decision> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::long("YES").help("HALP").req_flag(Decision::Yes);
-                let alt1 = ::bpaf::long("no").req_flag(Decision::No).hide();
-                let alt2 = ::bpaf::env("x").long("maybe").req_flag(Decision::Maybe);
-                let alt3 = ::bpaf::long("dunno").req_flag(Decision::Dunno);
-                let alt4 = ::bpaf::short('u').req_flag(Decision::Umm);
-                let alt5 = ::bpaf::short('U').req_flag(Decision::Ummmmmmm);
-                ::bpaf::construct!([alt0, alt1, alt2, alt3, alt4, alt5,])
+                let alt0 = #bpaf_path::long("YES").help("HALP").req_flag(Decision::Yes);
+                let alt1 = #bpaf_path::long("no").req_flag(Decision::No).hide();
+                let alt2 = #bpaf_path::env("x").long("maybe").req_flag(Decision::Maybe);
+                let alt3 = #bpaf_path::long("dunno").req_flag(Decision::Dunno);
+                let alt4 = #bpaf_path::short('u').req_flag(Decision::Umm);
+                let alt5 = #bpaf_path::short('U').req_flag(Decision::Ummmmmmm);
+                #bpaf_path::construct!([alt0, alt1, alt2, alt3, alt4, alt5,])
             }
             .fallback(Decision::No)
         }
@@ -814,12 +814,12 @@ fn explicit_external() {
     };
 
     let expected = quote! {
-        fn options() -> ::bpaf::OptionParser<Options> {
+        fn options() -> #bpaf_path::OptionParser<Options> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
                 let action = actions().fallback(Action::List);
-                ::bpaf::construct!(Options { action, })
+                #bpaf_path::construct!(Options { action, })
             }
             .to_options()
         }
@@ -839,12 +839,12 @@ fn implicit_external() {
     };
 
     let expected = quote! {
-        fn options() -> ::bpaf::OptionParser<Options> {
+        fn options() -> #bpaf_path::OptionParser<Options> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
                 let action = action().fallback(Action::List);
-                ::bpaf::construct!(Options { action, })
+                #bpaf_path::construct!(Options { action, })
             }
             .to_options()
         }
@@ -865,14 +865,14 @@ fn fallback_for_options() {
     };
 
     let expected = quote! {
-        fn opts() -> ::bpaf::OptionParser<Opts> {
+        fn opts() -> #bpaf_path::OptionParser<Opts> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::long("llvm").req_flag(Opts::Llvm);
-                let alt1 = ::bpaf::long("att").req_flag(Opts::Att);
-                let alt2 = ::bpaf::long("dummy").req_flag(Opts::Dummy);
-                ::bpaf::construct!([alt0, alt1, alt2,])
+                let alt0 = #bpaf_path::long("llvm").req_flag(Opts::Llvm);
+                let alt1 = #bpaf_path::long("att").req_flag(Opts::Att);
+                let alt2 = #bpaf_path::long("dummy").req_flag(Opts::Dummy);
+                #bpaf_path::construct!([alt0, alt1, alt2,])
             }
             .fallback(Opts::Dummy)
             .to_options()
@@ -890,12 +890,12 @@ fn implicitly_named_switch() {
     };
 
     let expected = quote! {
-        fn opts() -> ::bpaf::OptionParser<Opts> {
+        fn opts() -> #bpaf_path::OptionParser<Opts> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let f0 = ::bpaf::long("release").switch();
-                ::bpaf::construct!(Opts(f0,))
+                let f0 = #bpaf_path::long("release").switch();
+                #bpaf_path::construct!(Opts(f0,))
             }
             .fallback(Opts::Dummy)
             .to_options()
@@ -919,13 +919,13 @@ fn fallback_for_enum() {
     };
 
     let expected = quote! {
-        fn decision() -> impl ::bpaf::Parser<Decision> {
+        fn decision() -> impl #bpaf_path::Parser<Decision> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::long("yes").req_flag(Decision::Yes);
-                let alt1 = ::bpaf::short('n').long("nay").req_flag(Decision::No);
-                ::bpaf::construct!([alt0, alt1,])
+                let alt0 = #bpaf_path::long("yes").req_flag(Decision::Yes);
+                let alt1 = #bpaf_path::short('n').long("nay").req_flag(Decision::No);
+                #bpaf_path::construct!([alt0, alt1,])
             }
             .fallback(Decision::No)
         }
@@ -943,12 +943,12 @@ fn fallback_for_struct() {
     };
 
     let expected = quote! {
-        fn value() -> impl ::bpaf::Parser<Value> {
+        fn value() -> impl #bpaf_path::Parser<Value> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let count = ::bpaf::long("count").argument::<usize>("ARG");
-                ::bpaf::construct!(Value { count, })
+                let count = #bpaf_path::long("count").argument::<usize>("ARG");
+                #bpaf_path::construct!(Value { count, })
             }
             .fallback(Value { count: 10 })
         }
@@ -967,13 +967,13 @@ fn adjacent_for_struct() {
     };
 
     let expected = quote! {
-        fn opts() -> impl ::bpaf::Parser<Opts> {
+        fn opts() -> impl #bpaf_path::Parser<Opts> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let a = ::bpaf::short('a').argument::<String>("ARG");
-                let b = ::bpaf::short('b').argument::<String>("ARG");
-                ::bpaf::construct!(Opts { a, b, })
+                let a = #bpaf_path::short('a').argument::<String>("ARG");
+                let b = #bpaf_path::short('b').argument::<String>("ARG");
+                #bpaf_path::construct!(Opts { a, b, })
             }
             .adjacent()
         }
@@ -993,13 +993,13 @@ fn box_for_struct() {
     };
 
     let expected = quote! {
-        fn opts() -> impl ::bpaf::Parser<Opts> {
+        fn opts() -> impl #bpaf_path::Parser<Opts> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let a = ::bpaf::short('a').argument::<String>("ARG");
-                let b = ::bpaf::short('b').argument::<String>("ARG");
-                ::bpaf::construct!(Opts { a, b, })
+                let a = #bpaf_path::short('a').argument::<String>("ARG");
+                let b = #bpaf_path::short('b').argument::<String>("ARG");
+                #bpaf_path::construct!(Opts { a, b, })
             }
             .boxed()
         }
@@ -1015,11 +1015,11 @@ fn no_fields_declaration() {
     };
 
     let expected = quote! {
-        fn opts() -> impl ::bpaf::Parser<Opts> {
+        fn opts() -> impl #bpaf_path::Parser<Opts> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                ::bpaf::construct!(Opts {})
+                #bpaf_path::construct!(Opts {})
             }
         }
     };
@@ -1035,10 +1035,10 @@ fn single_unit_command() {
     };
 
     let expected = quote! {
-        fn one() -> impl ::bpaf::Parser<One> {
+        fn one() -> impl #bpaf_path::Parser<One> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
-            ::bpaf::pure(One).to_options().command("one")
+            use #bpaf_path::Parser;
+            #bpaf_path::pure(One).to_options().command("one")
         }
     };
 
@@ -1053,10 +1053,10 @@ fn single_unit_adjacent_command() {
     };
 
     let expected = quote! {
-        fn one() -> impl ::bpaf::Parser<One> {
+        fn one() -> impl #bpaf_path::Parser<One> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
-            ::bpaf::pure(One).to_options().command("one").adjacent()
+            use #bpaf_path::Parser;
+            #bpaf_path::pure(One).to_options().command("one").adjacent()
         }
     };
 
@@ -1078,13 +1078,13 @@ fn ingore_doc_comment_top_level_1() {
     };
 
     let expected = quote! {
-        fn mode() -> impl ::bpaf::Parser<Mode> {
+        fn mode() -> impl #bpaf_path::Parser<Mode> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::long("intel").help("intel help").req_flag(Mode::Intel);
-                let alt1 = ::bpaf::long("att").help("att help").req_flag(Mode::Att);
-                ::bpaf::construct!([alt0, alt1, ])
+                let alt0 = #bpaf_path::long("intel").help("intel help").req_flag(Mode::Intel);
+                let alt1 = #bpaf_path::long("att").help("att help").req_flag(Mode::Att);
+                #bpaf_path::construct!([alt0, alt1, ])
             }
         }
     };
@@ -1106,13 +1106,13 @@ fn ingore_doc_comment_top_level_2() {
     };
 
     let expected = quote! {
-        fn mode() -> ::bpaf::OptionParser<Mode> {
+        fn mode() -> #bpaf_path::OptionParser<Mode> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::long("intel").help("intel help").req_flag(Mode::Intel);
-                let alt1 = ::bpaf::long("att").help("att help").req_flag(Mode::Att);
-                ::bpaf::construct!([alt0, alt1,])
+                let alt0 = #bpaf_path::long("intel").help("intel help").req_flag(Mode::Intel);
+                let alt1 = #bpaf_path::long("att").help("att help").req_flag(Mode::Att);
+                #bpaf_path::construct!([alt0, alt1,])
             }
             .to_options()
         }
@@ -1134,13 +1134,13 @@ fn top_comment_is_group_help_enum() {
     };
 
     let expected = quote! {
-        fn mode() -> impl ::bpaf::Parser<Mode> {
+        fn mode() -> impl #bpaf_path::Parser<Mode> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let alt0 = ::bpaf::long("intel").help("intel help").req_flag(Mode::Intel);
-                let alt1 = ::bpaf::long("att").help("att help").req_flag(Mode::Att);
-                ::bpaf::construct!([alt0, alt1, ])
+                let alt0 = #bpaf_path::long("intel").help("intel help").req_flag(Mode::Intel);
+                let alt1 = #bpaf_path::long("att").help("att help").req_flag(Mode::Att);
+                #bpaf_path::construct!([alt0, alt1, ])
             }
             .group_help("present")
         }
@@ -1162,13 +1162,13 @@ fn top_comment_is_group_help_struct() {
     };
 
     let expected = quote! {
-        fn mode() -> impl ::bpaf::Parser<Mode> {
+        fn mode() -> impl #bpaf_path::Parser<Mode> {
             #[allow(unused_imports)]
-            use ::bpaf::Parser;
+            use #bpaf_path::Parser;
             {
-                let intel = ::bpaf::long("intel").help("help").switch();
-                let att = ::bpaf::long("att").help("help").switch();
-                ::bpaf::construct!(Mode { intel, att, })
+                let intel = #bpaf_path::long("intel").help("help").switch();
+                let att = #bpaf_path::long("att").help("help").switch();
+                #bpaf_path::construct!(Mode { intel, att, })
             }
             .group_help("present")
         }

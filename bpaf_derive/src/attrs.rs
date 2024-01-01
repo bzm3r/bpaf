@@ -238,6 +238,7 @@ impl ToTokens for PostDecor {
             PostDecor::Hide { .. } => quote!(hide()),
             PostDecor::CustomUsage { usage, .. } => quote!(custom_usage(#usage)),
             PostDecor::HideUsage { .. } => quote!(hide_usage()),
+            PostDecor::CratePath { .. } => quote!(),
         }
         .to_tokens(tokens);
     }
@@ -323,6 +324,10 @@ pub(crate) enum PostDecor {
     HideUsage {
         span: Span,
     },
+    CratePath {
+        span: Span,
+        bpaf_path: syn::Path,
+    },
 }
 impl PostDecor {
     fn span(&self) -> Span {
@@ -339,9 +344,26 @@ impl PostDecor {
             | Self::Guard { span, .. }
             | Self::Hide { span }
             | Self::CustomUsage { span, .. }
+            | Self::CratePath { span, .. }
             | Self::HideUsage { span } => *span,
         }
     }
+}
+
+/// Checks if a custom `bpaf_path` has been specified and returns it. If one
+/// was not specified, then return `::bpaf` (the absolute path), by default.
+///
+/// Note: if `bpaf_path` is defined multiple times, the last definition
+/// overrides all others.
+pub(crate) fn extract_bpaf_path(decors: &[PostDecor]) -> TokenStream {
+    decors
+        .iter()
+        .rev()
+        .find_map(|a| match a {
+            PostDecor::CratePath { bpaf_path, .. } => Some(bpaf_path.to_token_stream()),
+            _ => None,
+        })
+        .unwrap_or(quote!("#bpaf_path"))
 }
 
 impl Post {

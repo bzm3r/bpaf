@@ -80,8 +80,8 @@ impl ToTokens for Consumer {
             Consumer::Any {
                 metavar, ty, check, ..
             } => match ty {
-                Some(ty) => quote!(::bpaf::any::<#ty, _, _>(#metavar, #check)),
-                None => quote!(::bpaf::any(#metavar, #check)),
+                Some(ty) => quote!(#bpaf_path::any::<#ty, _, _>(#metavar, #check)),
+                None => quote!(#bpaf_path::any(#metavar, #check)),
             },
             Consumer::Argument { metavar, ty, .. } => {
                 let metavar = MMetavar(metavar.as_ref());
@@ -91,16 +91,16 @@ impl ToTokens for Consumer {
             Consumer::Positional { metavar, ty, .. } => {
                 let metavar = MMetavar(metavar.as_ref());
                 let tf = ty.as_ref().map(TurboFish);
-                quote!(::bpaf::positional #tf(#metavar))
+                quote!(#bpaf_path::positional #tf(#metavar))
             }
             Consumer::External { ident, .. } => {
                 quote!(#ident())
             }
             Consumer::Pure { expr, .. } => {
-                quote!(::bpaf::pure(#expr))
+                quote!(#bpaf_path::pure(#expr))
             }
             Consumer::PureWith { expr, .. } => {
-                quote!(::bpaf::pure_with(#expr))
+                quote!(#bpaf_path::pure_with(#expr))
             }
         }
         .to_tokens(tokens);
@@ -121,7 +121,7 @@ impl ToTokens for StructField {
         let names = naming.iter().chain(env.iter());
 
         let prefix = if cons.needs_name() {
-            quote!(::bpaf::)
+            quote!(#bpaf_path::)
         } else {
             quote!()
         };
