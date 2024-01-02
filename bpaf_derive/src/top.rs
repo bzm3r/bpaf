@@ -12,7 +12,7 @@ use syn::{
 
 use crate::{
     attrs::{parse_bpaf_doc_attrs, EnumPrefix, PostDecor, StrictName},
-    custom_path::PathPrefixReplacer,
+    custom_path::BpafPathReplacer,
     field::StructField,
     help::Help,
     td::{CommandCfg, EAttr, Ed, Mode, OptionsCfg, ParserCfg, TopInfo},
@@ -306,7 +306,7 @@ impl ToTokens for Top {
             //     )
             // })
             // .unwrap()
-            PathPrefixReplacer::new(parse_quote!(::bpaf), custom_path.clone())
+            BpafPathReplacer::new(parse_quote!(::bpaf), custom_path.clone())
                 .visit_item_fn_mut(&mut replaced);
 
             replaced.to_token_stream()
