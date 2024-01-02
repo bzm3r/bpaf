@@ -285,28 +285,25 @@ impl ToTokens for Top {
         };
 
         if let Some(custom_path) = extract_bpaf_path(attrs) {
-            let mut replaced: ItemFn =
-                syn::parse2(original)
-                    .map_err(|e| {
-                        syn::Error::new(
-                    e.span(),
-                    format!("Failed to parse originally generated macro output as an ItemFn: {e}"),
-                )
-                    })
-                    .unwrap();
-
-            PathPrefixReplacer::new(
-                syn::parse2(quote!(::bpaf))
-                    .map_err(|e| {
-                        syn::Error::new(
-                            e.span(),
-                            format!("Failed to convert quote!(::bpaf) into a Path: {e}"),
-                        )
-                    })
-                    .unwrap(),
-                custom_path,
-            )
-            .visit_item_fn_mut(&mut replaced);
+            //     syn::parse2(original)
+            //     .map_err(|e| {
+            //         syn::Error::new(
+            //     e.span(),
+            //     format!("Failed to parse originally generated macro output as an ItemFn: {e}"),
+            // )
+            //     })
+            //     .unwrap();
+            let mut replaced: ItemFn = parse_quote!(#original);
+            // syn::parse2(quote!(::bpaf))
+            // .map_err(|e| {
+            //     syn::Error::new(
+            //         e.span(),
+            //         format!("Failed to convert quote!(::bpaf) into a Path: {e}"),
+            //     )
+            // })
+            // .unwrap()
+            PathPrefixReplacer::new(parse_quote!(::bpaf), custom_path)
+                .visit_item_fn_mut(&mut replaced);
 
             replaced.to_token_stream()
         } else {
