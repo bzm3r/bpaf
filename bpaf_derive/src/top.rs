@@ -12,7 +12,7 @@ use syn::{
 
 use crate::{
     attrs::{parse_bpaf_doc_attrs, EnumPrefix, PostDecor, StrictName},
-    custom_path::{extract_bpaf_path, PathPrefixReplacer},
+    custom_path::PathPrefixReplacer,
     field::StructField,
     help::Help,
     td::{CommandCfg, EAttr, Ed, Mode, OptionsCfg, ParserCfg, TopInfo},
@@ -39,6 +39,7 @@ pub(crate) struct Top {
     boxed: bool,
     adjacent: bool,
     attrs: Vec<PostDecor>,
+    bpaf_path: Option<syn::Path>,
 }
 
 fn ident_to_long(ident: &Ident) -> LitStr {
@@ -64,6 +65,7 @@ impl Parse for Top {
             attrs,
             ignore_rustdoc,
             adjacent,
+            bpaf_path,
         } = top_decor.unwrap_or_default();
 
         if ignore_rustdoc {
@@ -113,6 +115,7 @@ impl Parse for Top {
             body,
             boxed,
             adjacent,
+            bpaf_path,
         })
     }
 }
@@ -176,6 +179,7 @@ impl ToTokens for Top {
             attrs,
             boxed,
             adjacent,
+            bpaf_path,
         } = self;
         let boxed = if *boxed { quote!(.boxed()) } else { quote!() };
         let adjacent = if *adjacent {
@@ -284,7 +288,7 @@ impl ToTokens for Top {
             }
         };
 
-        if let Some(custom_path) = extract_bpaf_path(attrs) {
+        if let Some(custom_path) = bpaf_path {
             //     syn::parse2(original)
             //     .map_err(|e| {
             //         syn::Error::new(
@@ -302,7 +306,7 @@ impl ToTokens for Top {
             //     )
             // })
             // .unwrap()
-            PathPrefixReplacer::new(parse_quote!(::bpaf), custom_path)
+            PathPrefixReplacer::new(parse_quote!(::bpaf), custom_path.clone())
                 .visit_item_fn_mut(&mut replaced);
 
             replaced.to_token_stream()

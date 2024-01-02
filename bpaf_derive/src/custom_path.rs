@@ -1,19 +1,5 @@
 use syn::{punctuated::Punctuated, visit_mut::VisitMut};
 
-use crate::attrs::PostDecor;
-
-/// Checks if a custom `bpaf_path` has been specified and returns it. If one
-/// was not specified, then return `::bpaf` (the absolute path), by default.
-///
-/// Note: if `bpaf_path` is defined multiple times, the last definition
-/// overrides all others.
-pub(crate) fn extract_bpaf_path(decors: &[PostDecor]) -> Option<syn::Path> {
-    decors.iter().rev().find_map(|a| match a {
-        PostDecor::BpafPath { bpaf_path, .. } => Some(bpaf_path.clone()),
-        _ => None,
-    })
-}
-
 /// Implements [`syn::visit_mut::VisitMut`] to find
 /// those [`Path`](syn::Path)s which match
 /// [`target`](Self::target) and replace them with [`replacement`](Self::replacement).
