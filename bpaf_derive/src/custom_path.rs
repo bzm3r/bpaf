@@ -1,4 +1,7 @@
-use syn::{punctuated::Punctuated, visit_mut::VisitMut};
+use syn::{
+    punctuated::Punctuated,
+    visit_mut::{self, VisitMut},
+};
 
 /// Implements [`syn::visit_mut::VisitMut`] to find
 /// those [`Path`](syn::Path)s which match
@@ -59,6 +62,7 @@ impl PathPrefixReplacer {
 
 impl VisitMut for PathPrefixReplacer {
     fn visit_path_mut(&mut self, path: &mut syn::Path) {
-        self.replace_if_matches(path)
+        self.replace_if_matches(path);
+        visit_mut::visit_path_mut(self, path);
     }
 }
