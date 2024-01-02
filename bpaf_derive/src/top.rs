@@ -5,7 +5,7 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_quote,
     punctuated::Punctuated,
-    token::{self, PathSep},
+    token,
     visit_mut::VisitMut,
     Attribute, Error, Expr, Ident, ItemFn, LitChar, LitStr, Result, Visibility,
 };

@@ -9,7 +9,7 @@ use crate::attrs::PostDecor;
 /// overrides all others.
 pub(crate) fn extract_bpaf_path(decors: &[PostDecor]) -> Option<syn::Path> {
     decors.iter().rev().find_map(|a| match a {
-        PostDecor::CratePath { bpaf_path, .. } => Some(bpaf_path.clone()),
+        PostDecor::BpafPath { bpaf_path, .. } => Some(bpaf_path.clone()),
         _ => None,
     })
 }
