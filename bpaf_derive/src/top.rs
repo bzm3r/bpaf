@@ -5,12 +5,14 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_quote,
     punctuated::Punctuated,
-    token, Attribute, Error, Expr, Ident, LitChar, LitStr, Result, Visibility,
+    token::{self, PathSep},
+    visit_mut::VisitMut,
+    Attribute, Error, Expr, Ident, ItemFn, LitChar, LitStr, Result, Visibility,
 };
 
 use crate::{
     attrs::{parse_bpaf_doc_attrs, EnumPrefix, PostDecor, StrictName},
-    custom_path::{extract_bpaf_path, FindAndReplace},
+    custom_path::{extract_bpaf_path, PathPrefixReplacer},
     field::StructField,
     help::Help,
     td::{CommandCfg, EAttr, Ed, Mode, OptionsCfg, ParserCfg, TopInfo},
@@ -181,16 +183,9 @@ impl ToTokens for Top {
         } else {
             quote!()
         };
+        let global_path: syn::Path = syn::parse2(quote!("::bpaf")).unwrap();
 
-        let new_body = if let Some(bpaf_path) = extract_bpaf_path(&attrs) {
-            let global_path: syn::Path = syn::parse2(quote!(::bpaf)).unwrap();
-            Some(body.find_and_replace(&global_path, &bpaf_path).unwrap())
-        } else {
-            None
-        };
-        let body = new_body.as_ref().unwrap_or(body);
-
-        match mode {
+        let original = match mode {
             Mode::Command { command, options } => {
                 let OptionsCfg {
                     cargo_helper: _,
@@ -288,7 +283,16 @@ impl ToTokens for Top {
                     }
                 }
             }
-        }.to_tokens(tokens)
+        };
+
+        if let Some(custom_path) = extract_bpaf_path(attrs) {
+            let mut replaced: ItemFn = syn::parse2(original).unwrap();
+            PathPrefixReplacer::new(global_path, custom_path).visit_item_fn_mut(&mut replaced);
+            replaced.to_token_stream()
+        } else {
+            original
+        }
+        .to_tokens(tokens)
     }
 }
 

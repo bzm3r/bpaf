@@ -1,18 +1,6 @@
-use std::iter::FromIterator;
+use syn::{punctuated::Punctuated, visit_mut::VisitMut};
 
-use proc_macro2::TokenStream;
-use quote::ToTokens;
-use syn::{
-    punctuated::{Pair, Punctuated},
-    visit_mut::VisitMut,
-    Expr, Ident, PathSegment, Result,
-};
-
-use crate::{
-    attrs::{EnumPrefix, PostDecor},
-    field::StructField,
-    top::{Body, Branch, EnumBranch, FieldSet},
-};
+use crate::attrs::PostDecor;
 
 /// Checks if a custom `bpaf_path` has been specified and returns it. If one
 /// was not specified, then return `::bpaf` (the absolute path), by default.
@@ -26,121 +14,65 @@ pub(crate) fn extract_bpaf_path(decors: &[PostDecor]) -> Option<syn::Path> {
     })
 }
 
-pub struct FindAndReplaceVisitor {
-    find: Ident,
-    replace: Ident,
+/// Implements [`syn::visit_mut::VisitMut`] to find
+/// those [`Path`](syn::Path)s which match
+/// [`target`](Self::target) and replace them with [`replacement`](Self::replacement).
+pub(crate) struct PathPrefixReplacer {
+    target: syn::Path,
+    replacement: syn::Path,
 }
 
-impl VisitMut for FindAndReplaceVisitor {
-    fn visit_path_segment_mut(&mut self, seg: &mut syn::PathSegment) {
-        let PathSegment { ident, .. } = seg;
-        if ident == &self.find {
-            *ident = self.replace.clone();
+impl PathPrefixReplacer {
+    pub(crate) fn new(target: syn::Path, replacement: syn::Path) -> Self {
+        PathPrefixReplacer {
+            target,
+            replacement,
+        }
+    }
+
+    /// Check if both [`target`](Self::target) and `other` have the same kind of
+    /// leading path segment (`::`), which marks [a path as
+    /// global](https://doc.rust-lang.org/reference/procedural-macros.html#procedural-macro-hygiene).
+    ///
+    /// If these do not match, no replacement will be performed.
+    fn matches_target_global(&self, other: &mut syn::Path) -> bool {
+        self.target.leading_colon.is_some() && other.leading_colon.is_some()
+    }
+
+    /// Check if the initial segments of `other` match [`target`](Self::target).
+    ///
+    /// If these do not match, no replacement will be performed.
+    fn matches_target_segments(&self, other: &mut syn::Path) -> bool {
+        self.target
+            .segments
+            .iter()
+            .zip(other.segments.iter())
+            .all(|(f, o)| f == o)
+    }
+
+    /// Replaces the prefix of `other` with those of [`replacement`](Self::replacement).
+    fn replace_if_matches(&self, other: &mut syn::Path) {
+        if self.matches_target_global(other) && self.matches_target_segments(other) {
+            other.leading_colon = self.replacement.leading_colon;
+            other.segments = self
+                .replacement
+                .segments
+                .clone()
+                .into_iter()
+                .chain(
+                    other
+                        .segments
+                        .iter()
+                        .skip(self.target.segments.iter().count())
+                        .cloned(),
+                )
+                .collect::<Punctuated<_, _>>();
         }
     }
 }
 
-pub(crate) trait FindAndReplace: Sized {
-    fn find_and_replace<T: Clone>(&self, find: &T, replace: &T) -> Result<Self>;
-}
-
-impl<X: FindAndReplace> FindAndReplace for Box<X> {
-    fn find_and_replace<T: Clone>(&self, find: &T, replace: &T) -> Result<Self> {
-        Ok(Box::new(self.as_ref().find_and_replace(find, replace)?))
-    }
-}
-
-impl FindAndReplace for StructField {
-    fn find_and_replace<T: Clone>(&self, find: &T, replace: &T) -> Result<Self> {
-        let Self {
-            name,
-            env,
-            naming,
-            cons,
-            postpr,
-            help,
-        } = self.clone();
-
-        Ok(Self {
-            name,
-            env,
-            naming,
-            cons,
-            postpr,
-            help,
-        })
-    }
-}
-
-impl<X, S> FindAndReplace for Punctuated<X, S>
-where
-    S: Clone,
-    X: Clone + FindAndReplace,
-{
-    fn find_and_replace<T: Clone>(&self, find: &T, replace: &T) -> Result<Self> {
-        Ok(<Punctuated<X, S>>::from_iter(
-            self.clone()
-                .into_pairs()
-                .map(|pair| match pair {
-                    Pair::Punctuated(item, sep) => item
-                        .find_and_replace(find, replace)
-                        .map(|item| Pair::Punctuated(item, sep)),
-                    Pair::End(item) => item
-                        .find_and_replace(find, replace)
-                        .map(|item| Pair::End(item)),
-                })
-                .collect::<Result<Vec<Pair<_, _>>>>()?,
-        ))
-    }
-}
-
-impl FindAndReplace for FieldSet {
-    fn find_and_replace<T: Clone>(&self, find: &T, replace: &T) -> Result<Self> {
-        Ok(match self.clone() {
-            FieldSet::Named(struct_fields) => {
-                FieldSet::Named(struct_fields.find_and_replace(find, replace)?)
-            }
-            FieldSet::Unnamed(struct_fields) => {
-                FieldSet::Unnamed(struct_fields.find_and_replace(find, replace)?)
-            }
-            FieldSet::Unit(id, strict_name, help) => todo!(),
-            FieldSet::Pure(expr) => todo!(),
-        })
-    }
-}
-
-impl FindAndReplace for Branch {
-    fn find_and_replace<T: Clone>(&self, find: &T, replace: &T) -> Result<Self> {
-        let Self {
-            enum_name,
-            ident,
-            fields,
-        } = self.clone();
-        Ok(Self {
-            enum_name,
-            ident,
-            fields: fields.find_and_replace(find, replace)?,
-        })
-    }
-}
-
-impl FindAndReplace for EnumBranch {
-    fn find_and_replace<T: Clone>(&self, find: &T, replace: &T) -> Result<Self> {
-        todo!()
-    }
-}
-
-impl FindAndReplace for Body {
-    fn find_and_replace<T: Clone>(&self, find: &T, replace: &T) -> Result<Self> {
-        Ok(match self.clone() {
-            Body::Single(branch) => Body::Single(branch.find_and_replace(find, replace)?),
-            Body::Alternatives(id, enum_branches) => Body::Alternatives(
-                id.clone(),
-                enum_branches
-                    .into_iter()
-                    .map(|b| b.find_and_replace(find, replace))
-                    .collect::<Result<_>>()?,
-            ),
-        })
+impl VisitMut for PathPrefixReplacer {
+    fn visit_path_mut(&mut self, path: &mut syn::Path) {
+        self.replace_if_matches(path)
     }
 }
