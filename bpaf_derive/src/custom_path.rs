@@ -80,9 +80,9 @@ pub trait CratePath: Sized {
     fn iter(&self) -> Self::PartIter<'_>;
 }
 
-struct MatchRemainder<> {
+struct MatchRemainder {
     replaced_path: P,
-    remainder: Option<P>
+    remainder: Option<P>,
 }
 
 pub trait InputMatcher: CratePath {
