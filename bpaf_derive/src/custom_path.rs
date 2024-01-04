@@ -1,13 +1,9 @@
-use std::{
-    convert::{TryFrom, TryInto},
-    iter::Peekable,
-    slice,
-};
+use std::slice;
 
 use quote::ToTokens;
 use syn::{
     punctuated::{self},
-    token::{Match, PathSep},
+    token::PathSep,
     visit_mut::{self, VisitMut},
     Ident, ItemUse, PathSegment, Result, UseTree,
 };
@@ -17,14 +13,30 @@ use syn::{
 /// [`target`](Self::target) and replace them with [`replacement`](Self::replacement).
 pub(crate) struct BpafPathReplacer {
     query: SimplePath,
-    replacement: SimplePath,
+    replacement: syn::Path,
+}
+
+fn check_simple(path: syn::Path) -> Result<syn::Path> {
+    if path.iter().all(|seg| seg.arguments.is_none()) {
+        Ok(path)
+    } else {
+        Err(syn::Error::new_spanned(
+            path,
+            format_args!(
+                "bpaf crate path should not contain path arguments (items in angle brackets <..>)."
+            ),
+        ))
+    }
 }
 
 impl BpafPathReplacer {
     pub(crate) fn new(query: syn::Path, replacement: syn::Path) -> Result<Self> {
         Ok(BpafPathReplacer {
-            query: query.try_into()?,
-            replacement: replacement.try_into()?,
+            query: check_simple(query).map(|query| SimplePath {
+                leading_colon: query.leading_colon,
+                segments: query.segments.into_iter().map(|s| s.ident).collect(),
+            })?,
+            replacement: check_simple(replacement)?,
         })
     }
 
@@ -33,25 +45,17 @@ impl BpafPathReplacer {
     /// global](https://doc.rust-lang.org/reference/procedural-macros.html#procedural-macro-hygiene))
     /// and the same [`Ident`]s forming the prefix of the path. If there is a
     /// match, the prefix of `target` will be replacement with [`replacement`](Self::replacement)
-    fn replace_if_match<'a, P: CratePath>(&self, other: &'a P) -> Option<P> {
-        todo!()
+    fn replace_if_match<'a, P: InputPath>(&self, other: &'a P) -> Option<P> {
+        let prefix_matcher = PrefixMatcher::new(&self.query, other);
+        prefix_matcher
+            .get_suffix()
+            .map(|suffix| P::concatenate(self.replacement.clone(), suffix).unwrap())
     }
 }
 
 pub struct SimplePath {
     leading_colon: Option<PathSep>,
     segments: Vec<Ident>,
-}
-
-impl TryFrom<syn::Path> for SimplePath {
-    type Error = syn::Error;
-
-    fn try_from(path: syn::Path) -> Result<Self> {
-        Ok(SimplePath {
-            leading_colon: path.leading_colon,
-            segments: TryFromIterator::try_from_iter(path, path.segments)?,
-        })
-    }
 }
 
 pub trait PathPart: Clone {
@@ -71,7 +75,7 @@ impl PathPart for Ident {
 
 pub trait CratePath: Sized {
     type Part: PathPart;
-    type PartIter<'a>: Iterator<Item = &'a Self::Part> + Clone
+    type PartIter<'a>: Iterator<Item = &'a Self::Part> + CloneRemainder
     where
         Self: 'a;
 
@@ -80,53 +84,57 @@ pub trait CratePath: Sized {
     fn iter(&self) -> Self::PartIter<'_>;
 }
 
-struct MatchRemainder {
+pub trait CloneRemainder {}
+
+struct MatchRemainder<P: CratePath> {
     replaced_path: P,
     remainder: Option<P>,
 }
 
-pub trait InputMatcher: CratePath {
-    type MatchRemainder;
+pub struct PrefixMatcher<'a, P: CratePath> {
+    query: &'a SimplePath,
+    target: &'a P,
+}
 
-    fn new_matcher(&self, query_iter: slice::Iter<Ident>, replacement: &SimplePath) -> Self;
-
-    fn query_iter(&self) -> slice::Iter<'_, Ident>;
-
-    fn input_iter(&self) -> <Self as CratePath>::PartIter<'_>;
-
-    fn status(&self) -> MatchStatus<'_, Self>;
-
-    fn status_mut(&self) -> MatchStatus<'_, Self>;
-
-    fn next_match(&self) -> Option<MatchStatus<'_, Self>> {
-        self.status = match (self.query_iter.next(), self.target_iter.next()) {
-            (Some(query_part), Some(target_part)) => {
-                if query_part == target_part.ident() {
-                    Some(MatchStatus::Partial {
-                        current: target_part,
-                    })
-                } else {
-                    None
-                }
-            }
-            (None, Some(target)) => match self.status {
-                Some(MatchStatus::Partial { current }) => Some(MatchStatus::Complete {
-                    tail: self.target_iter.clone(),
-                }),
-                Some(MatchStatus::Complete { .. }) => self.status,
-                None => todo!(),
-            },
-            (Some(_query), None) => None,
-            (None, None) => None,
-        };
-
-        self.status
+impl<'a, P: CratePath> PrefixMatcher<'a, P> {
+    fn new(query: &'a SimplePath, target: &'a P) -> PrefixMatcher<'a, P> {
+        Self { query, target }
     }
 
-    fn matching_iter(
-        &self,
-        query_iter: slice::Iter<&'_ Ident>,
-    ) -> Option<Self::PartMatchingIter<'_>>;
+    /// Get the tail part of [`target`](Self::target), if its prefix to match
+    /// [`query`](Self::query). If there is no prefix match, then return None;
+    fn get_suffix(&self) -> Option<P::PartIter<'a>> {
+        if self.query.leading_colon() == self.target.leading_colon() {
+            BaseMatchIter {
+                query_iter: self.query.iter(),
+                target_iter: self.target.iter(),
+                status: Option::<MatchStatus<P>>::None,
+            }
+            .last()
+            .and_then(|status| match status {
+                MatchStatus::Complete { tail } => Some(tail),
+                _ => None,
+            })
+        } else {
+            None
+        }
+    }
+}
+
+pub struct BaseMatchIter<'a, P: CratePath> {
+    query_iter: slice::Iter<'a, Ident>,
+    target_iter: P::PartIter<'a>,
+    status: Option<MatchStatus<'a, P>>,
+}
+
+impl<'a, P: CratePath> Iterator for BaseMatchIter<'a, P> {
+    type Item = MatchStatus<'a, P>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.status
+            .update(self.query_iter.next(), self.target_iter.next());
+        self.status
+    }
 }
 
 impl CratePath for SimplePath {
@@ -142,28 +150,8 @@ impl CratePath for SimplePath {
     }
 }
 
-pub trait TryFromIterator<A>: Sized {
-    fn try_from_iter<Ctx: ToTokens, T: IntoIterator<Item = A>>(
-        context_tokens: Ctx,
-        iter: T,
-    ) -> Result<Self>;
-}
-
-impl TryFromIterator<PathSegment> for Vec<Ident> {
-    fn try_from_iter<Ctx: ToTokens, T: IntoIterator<Item = PathSegment>>(
-        context_tokens: Ctx,
-        iter: T,
-    ) -> Result<Self> {
-        iter.into_iter().map(|s| {
-            let PathSegment { ident, arguments } = s;
-            if arguments.is_none() {
-                Ok(ident.clone())
-            } else {
-                Err(syn::Error::new_spanned(context_tokens, format_args!("bpaf crate path should not contain path arguments (items in angle brackets <..>).")))
-            }
-        })
-        .collect::<Result<_>>()
-    }
+trait InputPath: CratePath {
+    fn concatenate(prefix: syn::Path, suffix: Self::PartIter<'_>) -> Result<Self>;
 }
 
 pub trait PathPartIter<'a, X: PathPart + 'a>: Iterator<Item = &'a X> {
@@ -184,66 +172,39 @@ where
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum MatchStatus<'a, P: InputMatcher + 'a> {
-    Partial { current: &'a P::Part },
-    Complete { tail: P::MatchRemainder },
+#[derive(Clone, Debug)]
+pub struct MatchStatus<'a, P: CratePath + 'a> {
+    mismatch: bool,
+    match_complete: bool,
+    matched_prefix: Vec<&'a P::Part>,
+    suffix: Option<P>,
 }
 
-pub struct Matcher<'a, P: InputMatcher> {
-    query: &'a SimplePath,
-    replacement: &'a SimplePath,
-    target: &'a P,
-}
-
-impl<'a, P: InputMatcher> Matcher<'a, P> {
-    fn new(query: &'a SimplePath, replacement: &'a SimplePath, target: &'a P) -> Matcher<'a, P> {
-        Self {
-            query,
-            replacement,
-            target,
-        }
-    }
-
-    fn match_iter(&self) -> P::PartMatchingIter<'_> {
-        if self.query.leading_colon() == self.target.leading_colon() {
-            MatchIter::LeadingColonsMatch(self.target.matching_iter(self.query.iter()))
+impl<'a, P: CratePath + 'a> MatchStatus<'a, P> {
+    fn update(
+        &mut self,
+        query_iter: slice::Iter<'_, Ident>,
+        target_iter: &'a P::PartIter<'a>,
+    ) -> bool {
+        if self.mismatch {
+            false
         } else {
-            MatchIter::LeadingColonsMismatch
-        }
-    }
+            match (query_iter.next(), target_iter.next()) {
+                (Some(q), Some(t)) => {
+                    if q == t.ident() {
+                        self.matched_prefix.push(t);
+                    } else {
+                        self.mismatch = true;
+                    }
+                }
+                (None, Some(t)) => {
+                    self.match_complete = true;
+                    self.suffix = t.clone_remainder();
+                }
+                (_, None) => false,
+            };
 
-    fn maybe_replace(&self) -> Option<P> {
-        self.match_iter().last().and_then(|status| match status {
-            MatchStatus::Partial { .. } => None,
-            MatchStatus::Complete { tail } => Some(todo!()),
-        })
-    }
-}
-
-// pub enum MatchIter<'a, P: CratePath + 'a> {
-//     /// Leading colons matched.
-//     LeadingColonsMatch(BaseMatchIter<'a, P>),
-//     /// Leading colons did not match.
-//     LeadingColonsMismatch,
-// }
-
-// impl<'a, P: CratePath + 'a> MatchIter<'a, P> {
-//     fn status(&self) -> Option<MatchStatus<'a, P>> {
-//         match self {
-//             MatchIter::LeadingColonsMatch(match_iter) => match_iter.status,
-//             MatchIter::LeadingColonsMismatch => None,
-//         }
-//     }
-// }
-
-impl<'a, P: CratePath> Iterator for MatchIter<'a, P> {
-    type Item = MatchStatus<'a, P>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            MatchIter::LeadingColonsMatch(base_match_iter) => base_match_iter.next(),
-            MatchIter::LeadingColonsMismatch => None,
+            !self.mismatch
         }
     }
 }
@@ -266,68 +227,27 @@ impl PathPart for PathSegment {
     }
 }
 
-#[derive(Clone)]
-pub struct PathMatchingIter<'a> {
-    query: slice::Iter<'a, Ident>,
-    target: punctuated::Iter<'a, PathSegment>,
-    status: MatchStatus<'a, syn::Path>,
-}
-
-impl<'a> Iterator for PathMatchingIter<'a>
-where
-    Self: 'a,
-{
-    type Item = &'a PathSegment;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.status = match (self.query_iter.next(), self.target_iter.next()) {
-            (Some(query_part), Some(target_part)) => {
-                if query_part == target_part.ident() {
-                    Some(MatchStatus::Partial {
-                        current: target_part,
-                    })
-                } else {
-                    None
-                }
-            }
-            (None, Some(target)) => match self.status {
-                Some(MatchStatus::Partial { current }) => Some(MatchStatus::Complete {
-                    tail: self.target_iter.clone(),
-                }),
-                Some(MatchStatus::Complete { .. }) => self.status,
-                None => todo!(),
-            },
-            (Some(_query), None) => None,
-            (None, None) => None,
-        };
-
-        self.status
-    }
-}
-
 impl CratePath for syn::Path {
     type Part = PathSegment;
-
-    type PartMatchingIter<'a> = punctuated::Iter<'a, PathSegment>;
+    type PartIter<'a> = punctuated::Iter<'a, PathSegment>;
 
     fn leading_colon(&self) -> Option<PathSep> {
         self.leading_colon
     }
 
-    fn iter(&self) -> Self::PartMatchingIter<'_> {
+    fn iter(&self) -> Self::PartIter<'_> {
         self.segments.iter()
     }
 }
 
-impl TryFromIterator<Ident> for syn::Path {
-    fn try_from_iter<Ctx: ToTokens, T: IntoIterator<Item = Ident>>(
-        context_tokens: Ctx,
-        iter: T,
-    ) -> Result<Self> {
-        todo!()
+impl InputPath for syn::Path {
+    fn concatenate(_: &Self, prefix: syn::Path, suffix: Self::PartIter<'_>) -> Result<Self> {
+        Ok(Self {
+            leading_colon: prefix.leading_colon,
+            segments: prefix.segments.into_iter().chain(suffix.cloned()).collect(),
+        })
     }
 }
-
 impl PathPart for UseTree {
     fn ident(&self) -> &Ident {
         todo!()
@@ -355,7 +275,10 @@ where
             self.next_tree = match tree {
                 UseTree::Path(use_path) => use_path.tree.as_ref().into(),
                 UseTree::Name(_) | UseTree::Rename(_) | UseTree::Glob(_) => None,
-                UseTree::Group(use_group) => todo!(),
+                // TODO: when would the global bpaf path be a part of a tree?
+                // Likely just better to insist that macro writers always `use`
+                // bpaf without using a tree structure
+                UseTree::Group(_) => None,
             };
             Some(tree)
         } else {
@@ -367,23 +290,56 @@ where
 impl CratePath for ItemUse {
     type Part = UseTree;
 
-    type PartMatchingIter<'a> = TreeIter<'a>;
+    type PartIter<'a> = TreeIter<'a>;
 
     fn leading_colon(&self) -> Option<PathSep> {
         todo!()
     }
 
-    fn iter(&self) -> Self::PartMatchingIter<'_> {
+    fn iter(&self) -> Self::PartIter<'_> {
         todo!()
     }
 }
 
-impl TryFromIterator<Ident> for ItemUse {
-    fn try_from_iter<Ctx: ToTokens, T: IntoIterator<Item = Ident>>(
-        context_tokens: Ctx,
-        iter: T,
+fn concat_prefix_path_to_tree(
+    original_prefix: &UseTree,
+    prefix: syn::Path,
+    suffix: &UseTree,
+) -> UseTree {
+    match original_prefix {
+        UseTree::Path(_) => todo!(),
+        UseTree::Name(_) => todo!(),
+        UseTree::Rename(_) => todo!(),
+        UseTree::Glob(_) => todo!(),
+        UseTree::Group(_) => todo!(),
+    }
+}
+
+impl InputPath for ItemUse {
+    fn concatenate(
+        original_prefix: &Self,
+        prefix: syn::Path,
+        suffix: Self::PartIter<'_>,
     ) -> Result<Self> {
-        todo!()
+        Ok(Self {
+            attrs: original_prefix.attrs,
+            vis: original_prefix.vis,
+            use_token: original_prefix.use_token,
+            leading_colon: prefix.leading_colon,
+            tree: {
+                concat_prefix_path_to_tree(
+                    original_prefix.iter().last().ok_or_else(|| {
+                        syn::Error::new_spanned(
+                            original_prefix,
+                            format_args!("Expecting a non-empty path to replace."),
+                        )
+                    })?,
+                    prefix,
+                    suffix,
+                )
+            },
+            semi_token: original_prefix.semi_token,
+        })
     }
 }
 
