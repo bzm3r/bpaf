@@ -1,7 +1,7 @@
 use crate::{
     attrs::PostDecor,
     help::Help,
-    utils::{parse_arg, parse_opt_arg},
+    utils::{parse_arg, parse_name_value, parse_opt_arg},
 };
 use quote::{quote, ToTokens};
 use syn::{
@@ -245,7 +245,7 @@ impl Parse for TopInfo {
                 let help = parse_arg(input)?;
                 with_command(&kw, command.as_mut(), |cfg| cfg.help = Some(help))?;
             } else if kw == "bpaf_path" {
-                bpaf_path.replace(parse_arg::<syn::Path>(input)?);
+                bpaf_path.replace(parse_name_value::<syn::Path>(input)?);
             } else if let Some(pd) = PostDecor::parse(input, &kw)? {
                 attrs.push(pd);
             } else {
